@@ -227,16 +227,18 @@ bool LMS1xx::getData(scanData& data) {
 			bytes_read = read(sockDesc, buf, 1);
 			if(bytes_read > 1)
 			{
-				std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+				//std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
 				inc = bytes_read;
 				inc --;
 			}
 			else if(bytes_read < 1)
-				std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+			{
+				//std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+			}
 		}
 		else
 		{
-			std::cerr<<"select failed during find start: "<<strerror(errno)<<std::endl;
+			//std::cerr<<"select failed during find start: "<<strerror(errno)<<std::endl;
 		}
 
 	}while(buf[0+inc] != 0x02);
@@ -255,11 +257,11 @@ bool LMS1xx::getData(scanData& data) {
 				{
 					len = i+1;
 					bFoundEnd = true;
-					std::cerr<<"Found end!\n";
+					//std::cerr<<"Found end!\n";
 				}
 				if(bFoundEnd && buf[i] == 0x02)
 				{
-					std::cerr<<"Found start!\n";
+					//std::cerr<<"Found start!\n";
 					bFoundStart = true;
 				}
 			}
@@ -267,7 +269,7 @@ bool LMS1xx::getData(scanData& data) {
 			{
 				char flushBuffer[100000];
 				int bytesFlushed = recv(sockDesc, flushBuffer, 100000, 0);
-				std::cerr<<"Flushed read buffer"<<std::endl;
+				//std::cerr<<"Flushed read buffer"<<std::endl;
 				return false;
 			}
 		}
@@ -284,12 +286,16 @@ bool LMS1xx::getData(scanData& data) {
 			{
 				bytes_read = read(sockDesc, buf + len, 20000 - len);
 				if(bytes_read < 1)
-					std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+				{
+					//std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+				}
 				else
 					len += bytes_read;
 			}
 			else
-				std::cerr<<"select failed during get data: "<<strerror(errno)<<std::endl;
+			{
+				//std::cerr<<"select failed during get data: "<<strerror(errno)<<std::endl;
+			}
 		}
 	} while ((buf[len - 1] != 0x03));
 
@@ -435,7 +441,7 @@ bool LMS1xx::getData(scanData& data) {
 			}
 		}
 	}
-
+	return true;
 }
 
 void LMS1xx::saveConfig() {

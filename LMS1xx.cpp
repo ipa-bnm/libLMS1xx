@@ -29,6 +29,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
+#include <iostream>
+#include <errno.h>
 
 #include "LMS1xx.h"
 
@@ -204,24 +206,92 @@ void LMS1xx::scanContinous(int start) {
 	}
 }
 
-void LMS1xx::getData(scanData& data) {
+bool LMS1xx::getData(scanData& data) {
 	char buf[20000];
 	fd_set rfds;
 	struct timeval tv;
-	int retval, len;
-	len = 0;
+	int retval, len = 0;
+	int bytes_read = 0;
+	int inc = 0;
+	int r_off = 0;
 
-	do {
+	do{
 		FD_ZERO(&rfds);
 		FD_SET(sockDesc, &rfds);
-
-		tv.tv_sec = 0;
-		tv.tv_usec = 50000;
+		tv.tv_sec = 1;
+		tv.tv_usec = 0;
+		bytes_read = 0; inc = 0;
 		retval = select(sockDesc + 1, &rfds, NULL, NULL, &tv);
-		if (retval) {
-			len += read(sockDesc, buf + len, 20000 - len);
+		if(retval)
+		{
+			bytes_read = read(sockDesc, buf, 1);
+			if(bytes_read > 1)
+			{
+				std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+				inc = bytes_read;
+				inc --;
+			}
+			else if(bytes_read < 1)
+				std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
 		}
-	} while ((buf[0] != 0x02) || (buf[len - 1] != 0x03));
+		else
+		{
+			std::cerr<<"select failed during find start: "<<strerror(errno)<<std::endl;
+		}
+
+	}while(buf[0+inc] != 0x02);
+	len += bytes_read;
+
+
+	do {
+		bool bFoundEnd = false;
+		bool bFoundStart = false;
+		if(len >= 20000)
+		{
+			int i;
+			for(i = 0; i < len; i++)
+			{
+				if(buf[i] == 0x03)
+				{
+					len = i+1;
+					bFoundEnd = true;
+					std::cerr<<"Found end!\n";
+				}
+				if(bFoundEnd && buf[i] == 0x02)
+				{
+					std::cerr<<"Found start!\n";
+					bFoundStart = true;
+				}
+			}
+			if(!bFoundEnd)
+			{
+				char flushBuffer[100000];
+				int bytesFlushed = recv(sockDesc, flushBuffer, 100000, 0);
+				std::cerr<<"Flushed read buffer"<<std::endl;
+				return false;
+			}
+		}
+		if(!bFoundEnd)
+		{
+			FD_ZERO(&rfds);
+			FD_SET(sockDesc, &rfds);
+
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
+			bytes_read = 0;
+			retval = select(sockDesc + 1, &rfds, NULL, NULL, &tv);
+			if (retval)
+			{
+				bytes_read = read(sockDesc, buf + len, 20000 - len);
+				if(bytes_read < 1)
+					std::cerr<<"Error in getData: received "<< bytes_read <<" bytes"<<std::endl;
+				else
+					len += bytes_read;
+			}
+			else
+				std::cerr<<"select failed during get data: "<<strerror(errno)<<std::endl;
+		}
+	} while ((buf[len - 1] != 0x03));
 
 	//	if (debug)
 	//		std::cout << "scan data recieved" << std::endl;

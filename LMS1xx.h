@@ -280,7 +280,7 @@ public:
 	*
 	* @param data pointer to scanData buffer structure.
 	*/
-	void getData(scanData& data);
+	bool getData(scanData& data);
 
 	/*!
 	* @brief Save data permanently.
